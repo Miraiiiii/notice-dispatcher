@@ -8,8 +8,6 @@ class SSEWorker extends EventDispatcher {
   constructor() {
     super()
     this.eventSource = null
-    this.retryCount = 0
-    this.maxRetries = 3
     this.retryInterval = 5000
   }
 
@@ -18,10 +16,10 @@ class SSEWorker extends EventDispatcher {
    * @param {Object} options 配置选项
    * @param {string} options.sseUrl SSE 服务端地址，必填
    * @param {string[]} [options.events] 要监听的自定义事件列表，可选
-   * @param {number} [options.maxRetries=3] 连接失败时的最大重试次数，默认 3 次
    * @param {number} [options.retryInterval=5000] 重试间隔时间（毫秒），默认 5000ms
    * @param {Object} [options.headers] 请求头配置，可选，例如：{ 'Authorization': 'Bearer token' }
    * @param {boolean} [options.withCredentials=false] 是否携带认证信息，默认 false
+   * @param {boolean} [options.autoReconnect=false] 是否在连接断开时自动重连，默认 false
    */
   initEventSource(options) {
     if (!options.sseUrl) {
@@ -40,8 +38,9 @@ class SSEWorker extends EventDispatcher {
 
     try {
       // 更新重试配置
-      this.maxRetries = options.maxRetries ?? 3
       this.retryInterval = options.retryInterval ?? 5000
+
+      const url = new URL(options.sseUrl, self.location.origin)
 
       // 创建 EventSource 实例
       const eventSourceInit = {
@@ -53,7 +52,7 @@ class SSEWorker extends EventDispatcher {
         eventSourceInit.headers = options.headers
       }
 
-      this.eventSource = new EventSource(options.sseUrl, eventSourceInit)
+      this.eventSource = new EventSource(url.toString(), eventSourceInit)
       this.setupEventListeners(options)
     } catch (error) {
       this.handleError({
@@ -71,7 +70,6 @@ class SSEWorker extends EventDispatcher {
   setupEventListeners(options) {
     // 处理连接状态
     this.eventSource.onopen = () => {
-      this.retryCount = 0
       self.postMessage({
         type: 'sse:connected',
         data: { timestamp: Date.now() }
@@ -84,9 +82,8 @@ class SSEWorker extends EventDispatcher {
         type: 'connection'
       })
 
-      // 尝试重连
-      if (this.retryCount < this.maxRetries) {
-        this.retryCount += 1
+      // 根据配置决定是否自动重连
+      if (options.autoReconnect === true) {
         setTimeout(() => {
           this.reconnect(options)
         }, this.retryInterval)
@@ -116,14 +113,16 @@ class SSEWorker extends EventDispatcher {
    */
   handleMessage(type, event) {
     try {
-      const data = JSON.parse(event.data)
+      const data = {
+        data: event.data,
+        origin: event.origin,
+        timestamp: Date.now()
+      }
       self.postMessage({ type, data })
     } catch (error) {
       this.handleError({
         error,
-        type: 'parsing',
-        eventType: type,
-        rawData: event.data
+        type: 'parsing'
       })
     }
   }
@@ -133,17 +132,15 @@ class SSEWorker extends EventDispatcher {
    * @private
    * @param {Object} errorInfo 错误信息
    */
-  handleError(errorInfo) {
+  handleError({ error, type }) {
+    const errorData = {
+      message: error.message || 'Unknown error',
+      type,
+      timestamp: Date.now()
+    }
     self.postMessage({
       type: 'sse:error',
-      data: {
-        error: {
-          message: errorInfo.error.message,
-          type: errorInfo.type,
-          ...errorInfo
-        },
-        timestamp: Date.now()
-      }
+      data: { error: errorData }
     })
   }
 

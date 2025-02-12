@@ -1,3 +1,5 @@
+// eslint-disable-next-line import/no-unresolved
+import Worker from 'web-worker:./utils/sse.worker'
 import EventDispatcher from './utils/event-dispatch'
 
 /**
@@ -10,17 +12,17 @@ class NoticeDispatcher extends EventDispatcher {
    * @param {Object} options 配置选项
    * @param {string} options.sseUrl SSE 服务端地址，必填
    * @param {string[]} [options.events] 要监听的自定义事件列表，可选
-   * @param {number} [options.maxRetries=3] 连接失败时的最大重试次数，默认 3 次
    * @param {number} [options.retryInterval=5000] 重试间隔时间（毫秒），默认 5000ms
    * @param {Object} [options.headers] 请求头配置，可选
    * @param {boolean} [options.withCredentials=false] 是否携带认证信息，默认 false
+   * @param {boolean} [options.autoReconnect=false] 是否在连接断开时自动重连，默认 false
    */
   constructor(options = {}) {
     super()
     this.options = {
-      maxRetries: 3,
       retryInterval: 5000,
       withCredentials: false,
+      autoReconnect: false,
       ...options
     }
     this.worker = null
@@ -35,7 +37,7 @@ class NoticeDispatcher extends EventDispatcher {
   initWorker() {
     try {
       // 创建 Worker
-      this.worker = new Worker(new URL('./utils/sse.worker.js', import.meta.url), { type: 'module' })
+      this.worker = new Worker()
 
       // 监听 Worker 消息
       this.worker.onmessage = (event) => {
@@ -44,6 +46,9 @@ class NoticeDispatcher extends EventDispatcher {
           this.connected = true
         } else if (type === 'sse:closed') {
           this.connected = false
+          if (this.options.autoReconnect) {
+            this.reconnect()
+          }
         }
         this.dispatch(type, data)
       }
@@ -54,9 +59,7 @@ class NoticeDispatcher extends EventDispatcher {
         this.dispatch('worker:error', {
           error: {
             message: error.message,
-            filename: error.filename,
-            lineno: error.lineno,
-            colno: error.colno
+            type: 'worker'
           },
           timestamp: Date.now()
         })

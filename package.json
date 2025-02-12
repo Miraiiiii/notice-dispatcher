@@ -21,6 +21,7 @@
   "scripts": {
     "test": "jest",
     "build": "rollup -c",
+    "build:watch": "rollup -cw",
     "dev": "rollup -c -w",
     "prepublishOnly": "npm run build",
     "lint": "eslint src --ext .js",
@@ -41,10 +42,11 @@
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "rollup": "^2.79.1",
     "eslint": "^8.56.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.29.1",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "rollup": "^2.79.1",
+    "rollup-plugin-web-worker-loader": "^1.7.0"
   }
 }

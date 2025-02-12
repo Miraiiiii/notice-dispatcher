@@ -1,6 +1,7 @@
 import babel from '@rollup/plugin-babel'
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
+import webWorkerLoader from 'rollup-plugin-web-worker-loader'
 
 const config = {
   input: ['src/index.js', 'src/utils/sse.worker.js'],
@@ -19,6 +20,9 @@ const config = {
   plugins: [
     resolve(),
     commonjs(),
+    webWorkerLoader({
+      targetPlatform: 'browser'
+    }),
     babel({
       babelHelpers: 'bundled',
       presets: [

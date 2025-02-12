@@ -27,6 +27,12 @@ module.exports = {
       rules: {
         'no-restricted-globals': 'off'
       }
+    },
+    {
+      files: ['rollup.config.js'], // 针对 Rollup 配置文件
+      rules: {
+        'import/no-extraneous-dependencies': 'off'
+      }
     }
   ]
 }

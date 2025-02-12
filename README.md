@@ -5,7 +5,7 @@
 ## 特性
 
 - 🚀 基于 Web Worker，不阻塞主线程
-- 🔄 自动重连机制
+- 🔄 可配置的重连机制
 - 🎯 支持自定义事件
 - 💪 TypeScript 支持
 - 🛡️ 错误处理和状态管理
@@ -25,7 +25,9 @@ import NoticeDispatcher from 'notice-dispatcher'
 
 const dispatcher = new NoticeDispatcher({
   sseUrl: 'http://api.example.com/events',
-  events: ['notification', 'alert']  // 要监听的事件类型
+  events: ['notification', 'alert'],  // 要监听的事件类型
+  autoReconnect: true,  // 启用自动重连
+  retryInterval: 5000   // 重连间隔时间，默认 5000ms
 })
 
 // 监听连接状态
@@ -65,7 +67,9 @@ class NotificationService {
   constructor() {
     this.dispatcher = new NoticeDispatcher({
       sseUrl: 'http://api.example.com/events',
-      events: ['notification', 'alert']
+      events: ['notification', 'alert'],
+      autoReconnect: true,  // 启用自动重连
+      retryInterval: 5000   // 重连间隔时间，默认 5000ms
     })
     this.init()
   }
@@ -197,14 +201,14 @@ export const useNotificationStore = defineStore('notification', {
 
 #### 配置选项
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| sseUrl | string | 是 | SSE 服务端地址 |
-| events | string[] | 否 | 要监听的自定义事件列表 |
-| maxRetries | number | 否 | 最大重试次数 |
-| retryInterval | number | 否 | 重试间隔时间（毫秒） |
-| headers | Object | 否 | 请求头配置 |
-| withCredentials | boolean | 否 | 是否携带认证信息 |
+| 参数 | 类型 | 默认值 | 必填 | 说明 |
+|------|------|--------|------|------|
+| sseUrl | string | - | 是 | SSE 服务端地址 |
+| events | string[] | [] | 否 | 要监听的自定义事件列表 |
+| retryInterval | number | 5000 | 否 | 重连间隔时间（毫秒） |
+| headers | object | - | 否 | 请求头配置 |
+| withCredentials | boolean | false | 否 | 是否携带认证信息 |
+| autoReconnect | boolean | false | 否 | 是否在连接断开时自动重连 |
 
 #### 方法
 
@@ -240,8 +244,8 @@ export const useNotificationStore = defineStore('notification', {
    - SSE 连接需要服务端支持 `text/event-stream` Content-Type
 
 4. **自动重连**
-   - 默认最多重试 3 次，间隔 5 秒
-   - 可以通过监听 `sse:error` 实现自定义重连逻辑
+   - 可以通过 `autoReconnect` 参数配置是否启用自动重连
+   - 可以通过 `retryInterval` 参数配置重连间隔时间
 
 ## 浏览器支持
 
