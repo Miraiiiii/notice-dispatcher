@@ -1,6 +1,6 @@
 {
   "name": "notice-dispatcher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight SSE notification dispatcher running in Web Worker",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
