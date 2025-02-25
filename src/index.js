@@ -15,7 +15,7 @@ class NoticeDispatcher extends EventDispatcher {
    * @param {number} [options.retryInterval=5000] 重试间隔时间（毫秒），默认 5000ms
    * @param {Object} [options.headers] 请求头配置，可选
    * @param {boolean} [options.withCredentials=false] 是否携带认证信息，默认 false
-   * @param {boolean} [options.autoReconnect=false] 是否在连接断开时自动重连，默认 false
+   * @param {boolean} [options.autoReconnect=false] 是否在连接错误时自动重连，默认 false
    */
   constructor(options = {}) {
     super()
@@ -46,9 +46,6 @@ class NoticeDispatcher extends EventDispatcher {
           this.connected = true
         } else if (type === 'sse:closed') {
           this.connected = false
-          if (this.options.autoReconnect) {
-            this.reconnect()
-          }
         }
         this.dispatch(type, data)
       }
