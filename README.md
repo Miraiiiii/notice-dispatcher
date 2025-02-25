@@ -28,10 +28,7 @@ const dispatcher = new NoticeDispatcher({
   events: ['notification', 'alert'],  // 要监听的事件类型
   autoReconnect: true,               // 启用自动重连
   retryInterval: 5000,               // 重连间隔时间，默认 5000ms
-  withCredentials: true,             // 启用凭证发送（cookies等）
-  headers: {                         // 自定义请求头
-    'Authorization': 'Bearer token'
-  }
+  withCredentials: true             // 启用凭证发送（cookies等）
 })
 
 // 监听连接状态
@@ -70,9 +67,8 @@ dispatcher.close()
 | sseUrl | string | - | 是 | SSE 服务端地址 |
 | events | string[] | [] | 否 | 要监听的自定义事件列表 |
 | retryInterval | number | 5000 | 否 | 重连间隔时间（毫秒） |
-| headers | object | - | 否 | 请求头配置 |
 | withCredentials | boolean | false | 否 | 是否携带认证信息（cookies等） |
-| autoReconnect | boolean | false | 否 | 是否在连接断开时自动重连 |
+| autoReconnect | boolean | false | 否 | 是否在连接错误时自动重连 |
 
 ## API 方法
 

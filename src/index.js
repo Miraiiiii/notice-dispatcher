@@ -2,6 +2,9 @@
 import Worker from 'web-worker:./utils/sse.worker'
 import EventDispatcher from './utils/event-dispatch'
 
+// 存储实例的静态映射
+const instanceMap = new Map()
+
 /**
  * NoticeDispatcher 类
  * 用于处理 SSE 通知的调度器，运行在 Web Worker 中
@@ -13,7 +16,6 @@ class NoticeDispatcher extends EventDispatcher {
    * @param {string} options.sseUrl SSE 服务端地址，必填
    * @param {string[]} [options.events] 要监听的自定义事件列表，可选
    * @param {number} [options.retryInterval=5000] 重试间隔时间（毫秒），默认 5000ms
-   * @param {Object} [options.headers] 请求头配置，可选
    * @param {boolean} [options.withCredentials=false] 是否携带认证信息，默认 false
    * @param {boolean} [options.autoReconnect=false] 是否在连接错误时自动重连，默认 false
    */
@@ -97,6 +99,10 @@ class NoticeDispatcher extends EventDispatcher {
       } finally {
         this.worker = null
         this.connected = false
+        // 从实例映射中移除
+        if (this.options.sseUrl) {
+          instanceMap.delete(this.options.sseUrl)
+        }
       }
     }
   }
@@ -118,4 +124,27 @@ class NoticeDispatcher extends EventDispatcher {
   }
 }
 
-export default NoticeDispatcher
+/**
+ * 创建或获取 NoticeDispatcher 实例
+ * @param {Object} options 配置选项
+ * @returns {NoticeDispatcher} NoticeDispatcher 实例
+ */
+
+function createNoticeDispatcher(options = {}) {
+  if (!options.sseUrl) {
+    throw new Error('SSE URL is required')
+  }
+
+  // 检查是否已存在相同URL的实例
+  if (instanceMap.has(options.sseUrl)) {
+    return instanceMap.get(options.sseUrl)
+  }
+
+  // 创建新实例并存储
+  const instance = new NoticeDispatcher(options)
+  instanceMap.set(options.sseUrl, instance)
+  return instance
+}
+
+export { NoticeDispatcher, createNoticeDispatcher }
+export default { NoticeDispatcher, createNoticeDispatcher }

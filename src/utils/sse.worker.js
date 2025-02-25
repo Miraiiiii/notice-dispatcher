@@ -17,7 +17,6 @@ class SSEWorker extends EventDispatcher {
    * @param {string} options.sseUrl SSE 服务端地址，必填
    * @param {string[]} [options.events] 要监听的自定义事件列表，可选
    * @param {number} [options.retryInterval=5000] 重试间隔时间（毫秒），默认 5000ms
-   * @param {Object} [options.headers] 请求头配置，可选，例如：{ 'Authorization': 'Bearer token' }
    * @param {boolean} [options.withCredentials=false] 是否携带认证信息，默认 false
    * @param {boolean} [options.autoReconnect=false] 是否在连接断开时自动重连，默认 false
    */
@@ -45,11 +44,6 @@ class SSEWorker extends EventDispatcher {
       // 创建 EventSource 实例
       const eventSourceInit = {
         withCredentials: options.withCredentials ?? false
-      }
-
-      // 如果有自定义请求头，添加到配置中
-      if (options.headers) {
-        eventSourceInit.headers = options.headers
       }
 
       this.eventSource = new EventSource(url.toString(), eventSourceInit)
