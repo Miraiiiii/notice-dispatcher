@@ -1,15 +1,16 @@
 {
   "name": "notice-dispatcher",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A lightweight SSE notification dispatcher running in Web Worker",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.modern.mjs",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./worker": "./dist/worker/sse.worker.js"
   },
   "files": [
     "dist",

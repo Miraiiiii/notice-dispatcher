@@ -1,16 +1,13 @@
 # Notice Dispatcher
 
-一个轻量级的消息通知调度器，基于 Server-Sent Events (SSE)，运行在 Web Worker 中。支持 Vue 2.x 和 Vue 3.x。
+一个轻量的 SSE（Server‑Sent Events）通知调度器，默认运行在 Worker 中，支持多标签页复用同一连接（SharedWorker）。
 
 ## 特性
 
-- 🚀 基于 Web Worker，不阻塞主线程
-- 🔄 可配置的重连机制
-- 🎯 支持自定义事件
-- 💪 TypeScript 支持
-- 🛡️ 错误处理和状态管理
-- 🔌 支持 Vue 2.x 和 Vue 3.x
-- 📦 支持 ESM 和 CommonJS
+- 同源 + 相同 sseUrl 的标签页共享同一 SSE 连接
+- 支持自动重连与自定义事件
+- ESM / CJS 双输出
+- 内置类型声明
 
 ## 安装
 
@@ -18,178 +15,164 @@
 npm install notice-dispatcher
 ```
 
-## 基础使用
+## 基本使用
 
-```javascript
+```js
 import NoticeDispatcher from 'notice-dispatcher'
 
 const dispatcher = new NoticeDispatcher({
-  sseUrl: 'http://api.example.com/events',
-  events: ['notification', 'alert'],  // 要监听的事件类型
-  autoReconnect: true,               // 启用自动重连
-  retryInterval: 5000,               // 重连间隔时间，默认 5000ms
-  withCredentials: true             // 启用凭证发送（cookies等）
+  sseUrl: 'https://api.example.com/events',
+  events: ['notification', 'alert'],
+  autoReconnect: true,
+  retryInterval: 5000,
+  withCredentials: true
 })
 
-// 监听连接状态
 dispatcher.on('sse:connected', () => {
-  console.log('SSE 连接成功')
+  console.log('SSE 已连接')
 })
 
-// 监听错误
 dispatcher.on('sse:error', ({ error }) => {
-  console.error('发生错误:', error)
+  console.error('SSE 错误:', error)
 })
 
-// 监听连接关闭
-dispatcher.on('sse:closed', () => {
-  console.log('SSE 连接已关闭')
-})
-
-// 监听自定义事件
 dispatcher.on('notification', (data) => {
   console.log('收到通知:', data)
 })
-
-// 检查连接状态
-if (!dispatcher.isConnected()) {
-  dispatcher.reconnect()
-}
-
-// 关闭连接
-dispatcher.close()
 ```
 
-## 配置选项
+## 多标签共享（SharedWorker）
 
-| 参数 | 类型 | 默认值 | 必填 | 说明 |
-|------|------|--------|------|------|
-| sseUrl | string | - | 是 | SSE 服务端地址 |
-| events | string[] | [] | 否 | 要监听的自定义事件列表 |
-| retryInterval | number | 5000 | 否 | 重连间隔时间（毫秒） |
-| withCredentials | boolean | false | 否 | 是否携带认证信息（cookies等） |
-| autoReconnect | boolean | false | 否 | 是否在连接错误时自动重连 |
+SharedWorker 只有在「**同源 + 同脚本 URL + 同 name**」时才能共享实例。  
+本库默认 name 为 `notice-dispatcher:${sseUrl}`，所以需要保证 **worker 脚本 URL 稳定且可访问**。
 
-## API 方法
+### 1) 现代构建器（Vite / webpack5 / Rollup）
 
-| 方法名 | 参数 | 返回值 | 说明 |
-|--------|------|--------|------|
-| on | (type: string, handler: Function) | void | 添加事件监听器 |
-| off | (type: string, handler: Function) | void | 移除事件监听器 |
-| isConnected | () | boolean | 检查连接状态 |
-| reconnect | () | void | 手动重新连接 |
-| close | () | void | 关闭连接 |
+使用 ESM import（`exports.import`）时，会通过 `import.meta.url` 自动推导 worker URL。  
+无需额外配置，但构建产物仍会生成一个 worker 静态文件。
 
-## 内置事件
+#### Vite 4+ 预构建导致 Failed to fetch
 
-| 事件名 | 数据格式 | 说明 |
-|--------|----------|------|
-| sse:connected | { timestamp: number } | SSE 连接成功 |
-| sse:closed | { timestamp: number } | SSE 连接关闭 |
-| sse:error | { error: { message: string, type: string }, timestamp: number } | 发生错误 |
-| sse:message | { data: any, origin: string, timestamp: number } | 默认消息事件 |
+Vite 4 会对依赖做预构建，可能导致 `import.meta.url` 指向错误路径，从而报：
+`Failed to fetch a worker script`。  
+解决方法是在 `vite.config.js` 中排除预构建：
 
-## 本地开发调试
-
-### npm link 使用
-
-1. 在本项目目录下执行：
-```bash
-npm link
-```
-
-2. 在使用此库的项目中执行：
-```bash
-npm link notice-dispatcher
-```
-
-### 处理跨域问题
-
-#### 1. 配置开发服务器代理
-
-##### Vue CLI (webpack) 项目
-
-```javascript
-// vue.config.js
-module.exports = {
-  devServer: {
-    proxy: {
-      '/api': {
-        target: 'http://your-api-server.com',
-        changeOrigin: true,
-        ws: true,
-        credentials: true  // 如果需要发送 cookies
-      }
-    }
-  }
-}
-```
-
-##### Vite 项目
-
-```javascript
+```js
 // vite.config.js
-export default {
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://your-api-server.com',
-        changeOrigin: true,
-        ws: true,
-        credentials: true  // 如果需要发送 cookies
-      }
-    }
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  optimizeDeps: {
+    exclude: ['notice-dispatcher']
   }
-}
-```
-
-#### 2. 认证和 Cookie 处理
-
-如果需要发送认证信息（如 cookies），需要：
-
-1. 客户端配置：
-```javascript
-const dispatcher = new NoticeDispatcher({
-  sseUrl: 'http://localhost:8080/api/events',
-  withCredentials: true  // 启用 cookies 发送
 })
 ```
 
-2. 服务器配置：
-```javascript
-// Node.js Express 示例
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', 'http://localhost:8080'); // 必须是具体的源
-  next();
-});
+### 2) 旧版 Vue CLI（webpack4）
+
+旧版不支持 `import.meta.url`，需要手动提供 worker 文件并设置 URL。
+
+推荐做法：构建时自动拷贝 worker 文件
+
+```bash
+npm i -D copy-webpack-plugin@6
 ```
 
-## 浏览器兼容性
+```js
+// vue.config.js
+const path = require('path')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 
-- 支持 EventSource API 的现代浏览器
-- Chrome 9+
-- Firefox 6+
-- Safari 5+
-- Edge 79+
-- Opera 11+
+module.exports = {
+  configureWebpack: {
+    plugins: [
+      new CopyWebpackPlugin({
+        patterns: [
+          {
+            from: path.resolve(__dirname, 'node_modules/notice-dispatcher/dist/worker/sse.worker.js'),
+            to: 'notice-dispatcher/sse.worker.js'
+          }
+        ]
+      })
+    ]
+  }
+}
+```
 
-## 注意事项
+入口设置一次即可：
 
-1. **跨域处理**
-   - 确保服务器正确配置了 CORS 头
-   - 使用代理时注意配置 `ws: true`
-   - 发送认证信息时必须配置 `credentials: true`
+```js
+import { setWorkerUrl } from 'notice-dispatcher'
 
-2. **安全性**
-   - 生产环境建议使用 HTTPS
-   - 注意 token 等敏感信息的处理
-   - 合理配置重连机制，避免服务器压力
+setWorkerUrl('/notice-dispatcher/sse.worker.js')
+```
 
-3. **性能优化**
-   - 合理使用 `autoReconnect` 和 `retryInterval`
-   - 及时调用 `close()` 方法清理资源
-   - 注意移除不使用的事件监听器
+也可以用 `setWorkerBaseUrl('/notice-dispatcher/')` 自动拼接文件名。
+
+### 3) npm link / 本地调试
+
+1. 先构建：`npm run build`
+2. 再 `npm link`
+3. 使用方按“旧版 Vue CLI”方式拷贝 worker，并设置 `setWorkerUrl`
+
+如果控制台出现：
+`NoticeDispatcher: 未配置 workerUrl/workerBaseUrl...`
+说明当前回退为 inline 模式，**不会跨标签共享**。
+
+## API
+
+### new NoticeDispatcher(options)
+
+### createNoticeDispatcher(options)
+
+同一个 `sseUrl` 在单页内只创建一个实例。
+
+### setWorkerUrl(url)
+
+全局设置 SharedWorker 脚本 URL。
+
+### setWorkerBaseUrl(baseUrl)
+
+全局设置基础路径，会自动拼接 `sse.worker.js`。
+
+## 配置项
+
+| 参数 | 类型 | 默认 | 必填 | 说明 |
+|---|---|---|---|---|
+| sseUrl | string | - | 是 | SSE 服务端地址 |
+| events | string[] | [] | 否 | 监听的自定义事件 |
+| retryInterval | number | 5000 | 否 | 重试间隔（ms） |
+| withCredentials | boolean | false | 否 | 是否携带凭证 |
+| autoReconnect | boolean | false | 否 | 连接错误时自动重连 |
+| workerUrl | string | - | 否 | SharedWorker 脚本 URL |
+| workerBaseUrl | string | - | 否 | SharedWorker 脚本基础 URL |
+
+## 调试事件
+
+```js
+dispatcher.on('worker:info', (info) => {
+  console.log(info.workerId, info.ports)
+})
+```
+
+若两个标签页输出的 `workerId` 相同，则复用成功。
+
+## 常见问题
+
+### Failed to fetch a worker script
+
+worker 文件没有被静态资源服务到，或 URL 不正确。  
+旧版项目请按「旧版 Vue CLI」的拷贝方式处理。
+
+### Cannot use import statement outside a module
+
+说明你把 `workerUrl` 指向了 ESM 版本（`dist/sse.worker.js`）。  
+请改用 `dist/worker/sse.worker.js`（经典脚本）。
+
+### 标签页 workerId 不同
+
+通常是使用了 inline/Blob worker（URL 不稳定）。  
+请提供可访问的 worker 文件并设置 `setWorkerUrl`。
 
 ## License
 
