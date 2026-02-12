@@ -1,6 +1,8 @@
 // eslint-disable-next-line import/no-unresolved
 import SharedWorkerFactory from 'shared-worker:./utils/sse.worker'
 import EventDispatcher from './utils/event-dispatch'
+import createTabChannel from './utils/tabBus'
+import createTabCloseSync from './utils/tabCloseSync'
 
 // 存储实例的静态映射
 const instanceMap = new Map()
@@ -277,12 +279,16 @@ function createNoticeDispatcher(options = {}) {
 export {
   NoticeDispatcher,
   createNoticeDispatcher,
+  createTabChannel,
+  createTabCloseSync,
   setWorkerUrl,
   setWorkerBaseUrl
 }
 export default {
   NoticeDispatcher,
   createNoticeDispatcher,
+  createTabChannel,
+  createTabCloseSync,
   setWorkerUrl,
   setWorkerBaseUrl
 }
